@@ -5,7 +5,7 @@ const ConfirmationModal = ({ isOpen, headingText, buttonTxt, message, onConfirm,
 	if (!isOpen) return null;
 
 	return (
-		<div onClick={onCancel} className='fixed bg-black/40 inset-0 flex items-center backdrop-blur-sm justify-center z-50 p-4'>
+		<div onClick={onCancel} className='fixed inset-0 flex items-center justify-center bg-black/5 backdrop-blur-xs z-50'>
 			<div onClick={(e) => e.stopPropagation()} className='bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-100'>
 				<div className='flex items-center space-x-3 mb-4'>
 					<div className='bg-red-50 p-2.5 rounded-lg'>

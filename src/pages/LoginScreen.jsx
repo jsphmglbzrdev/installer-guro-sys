@@ -140,7 +140,7 @@ export default function LoginScreen() {
             <div className="mt-6">
               <button
                 type="button"
-                onClick={() => onLogin && onLogin('installer')}
+                onClick={() => navigate('/home')}
                 disabled={isLoading}
                 className="w-full flex cursor-pointer justify-center items-center py-3 px-4 border-2 border-slate-200 rounded-xl shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all group disabled:opacity-70 disabled:cursor-not-allowed"
               >

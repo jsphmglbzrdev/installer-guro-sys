@@ -7,6 +7,10 @@ import { supabase } from "./lib/supabase";
 import { useEffect, useState } from "react";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { Navigate } from "react-router-dom";
+import LoadingSpinner from "./components/LoadingSpinner";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 const App = () => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,37 +32,33 @@ const App = () => {
     };
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <LoadingSpinner />;
 
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        {/* Public */}
-        <Route
-          path="/"
-          element={session ? <Navigate to="/admin" /> : <LoginScreen />}
-        />
+    <>
+      <Routes>
+        <Route element={<Layout />}>
+          {/* Public */}
+          <Route
+            path="/"
+            element={session ? <Navigate to="/admin" /> : <LoginScreen />}
+          />
 
-        {/* Protected */}
-        <Route
-          path="/home"
-          element={
-            <ProtectedRoute session={session}>
-              <InstallerHome />
-            </ProtectedRoute>
-          }
-        />
+          {/* Protected */}
+          <Route path="/home" element={<InstallerHome />} />
+          <Route path="/home/reviewer/:id" element={<InstallerHome />} />
 
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute session={session}>
-              <Admin />
-            </ProtectedRoute>
-          }
-        />
-      </Route>
-    </Routes>
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute session={session}>
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
+      </Routes>
+    </>
   );
 };
 

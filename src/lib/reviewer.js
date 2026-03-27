@@ -1,14 +1,16 @@
 import { supabase } from "./supabase";
 
 export const getReviewer = async () => {
-	return await supabase.from('reviewers').select('*').single();
+	return await supabase.from('reviewers').select('*');
 }
 
-export const insertReviewer = async (title, description, file_path) => {
+export const insertReviewer = async (title, description, file_path, file_size, file_type) => {
 	return await supabase.from('reviewers').insert({
 		title,
 		description,
 		file_path,
+		file_size,
+		file_type
 	});
 }
 
@@ -21,8 +23,7 @@ export const uploadFile = async (filePath, file) => {
 }
 
 export const getFileUrl = async (filePath) => {
-	const { data } = supabase.storage.from('reviewer_attachment').getPublicUrl(filePath);
-	return data.publicUrl;
+	return await supabase.storage.from('reviewer_attachment').getPublicUrl(filePath);
 }
 
 export const deleteFile = async (filePath) => {

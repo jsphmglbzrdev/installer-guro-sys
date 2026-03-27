@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Upload,
   X,
@@ -10,75 +10,20 @@ import {
   Clock,
   Settings,
   BookOpen,
-
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import { useLoading } from "../context/LoadingContext";
-import { insertReviewer, uploadFile, getFileUrl } from "../lib/reviewer";
+import MainLesson from "../components/lesson/MainLesson";
+
+
 
 export default function AdminDashboard() {
-
   const [activeTab, setActiveTab] = useState("lessons"); // 'lessons', 'ai', 'history', 'settings'
-	const { setLoading } = useLoading();
-
 
   // Material Form State
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
 
   // Rule Form State
   const [newQuestion, setNewQuestion] = useState("");
   const [newResponse, setNewResponse] = useState("");
-
-  const handleAddMaterial = async(e) => {
-    e.preventDefault();
-		setLoading(true)
-
-		const file = selectedFile; // Use the actual file object
-		const filePath = file ? `${Date.now()}-${file.name}` : null; // Create unique filename with timestamp
-		
-		if(title.trim() === "" || description.trim() === ""){
-			alert("Please provide both title and description for the material.");
-			return;
-		}
-
-		try{
-			// Insert reviewer data first
-			const {data: uploadReviewer, error: uploadReviewerError} = await insertReviewer(title, description, filePath)
-			if(uploadReviewerError){
-				console.error("Error adding material:", uploadReviewerError);
-				alert("Failed to save material information");
-				return;
-			}else{
-				console.log("Material added successfully:", uploadReviewer);
-			}
-			
-			// Upload file if one was selected
-			if(file && filePath){
-				const { data: uploadData, error: uploadError } = await uploadFile(filePath, file);
-				if(uploadError){
-					console.error("File upload error:", uploadError);
-					alert("Material saved but file upload failed");
-				}else{
-					console.log("File uploaded successfully:", uploadData);
-					alert("Material and file uploaded successfully!");
-				}
-			} else {
-				alert("Material saved successfully!");
-			}
-
-			// Reset form
-			setTitle("");
-			setDescription("");
-			setFileName("");
-			setSelectedFile(null);
-
-		}finally{
-			setLoading(false)
-		}
-  };
 
   const handleAddRule = (e) => {
     e.preventDefault();
@@ -96,7 +41,6 @@ export default function AdminDashboard() {
     setBotRules(botRules.filter((r) => r.id !== id));
   };
 
-
   const tabs = [
     { id: "lessons", label: "Uploaded Lessons", icon: BookOpen },
     { id: "ai", label: "AI Configuration", icon: Bot },
@@ -107,8 +51,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
       {/* Top Navbar */}
-			<Navbar/>
-       
+      <Navbar />
 
       <div className="flex flex-col md:flex-row gap-8 p-6">
         {/* Sidebar Navigation */}
@@ -140,104 +83,7 @@ export default function AdminDashboard() {
         {/* Main Content Area */}
         <div className="flex-1 min-w-0">
           {/* TAB 1: UPLOADED LESSONS */}
-          {activeTab === "lessons" && (
-            <div className="space-y-6 animate-in fade-in duration-300">
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="bg-blue-50 p-2 rounded-lg">
-                    <Upload className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h2 className="text-lg font-semibold text-slate-800">
-                    Publish Review Material
-                  </h2>
-                </div>
-
-                <form onSubmit={handleAddMaterial} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Title
-                    </label>
-                    <input
-                      type="text"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      className="w-full px-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                      placeholder="e.g., Installation Guide v3"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Description / Instructions
-                    </label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all h-32 resize-none"
-                      placeholder="Write detailed review notes here..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Or Upload a File (Mock)
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="file"
-                        onChange={(e) => {
-                          const file = e.target.files[0];
-                          setSelectedFile(file);
-                          setFileName(file?.name || "");
-                        }}
-                        className="hidden"
-                        id="file-upload"
-                      />
-                      <label
-                        htmlFor="file-upload"
-                        className="cursor-pointer flex items-center justify-center px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors w-full"
-                      >
-                        <Paperclip className="w-4 h-4 mr-2 text-slate-400" />
-                        {fileName ? fileName : "Choose a file..."}
-                      </label>
-                      {fileName && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFileName("");
-                            setSelectedFile(null);
-                          }}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center space-x-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span>Publish to Installers</span>
-                  </button>
-                </form>
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
-                  Recently Published Lessons
-                </h3>
-                <div className="space-y-3">
-                  <p className="text-sm text-slate-400 italic">
-                    Materials will be displayed here after upload. Focus on file upload functionality first.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          {activeTab === "lessons" && <MainLesson />}
 
           {/* TAB 2: AI CONFIGURATION */}
           {activeTab === "ai" && (
@@ -513,8 +359,6 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
-
-   
     </div>
   );
 }
