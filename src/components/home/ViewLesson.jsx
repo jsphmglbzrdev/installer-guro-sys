@@ -1,6 +1,7 @@
-import { useParams } from "react-router-dom";
 
-const ViewLesson = ({ isOpen, onClose, children }) => {
+import RichTextViewer from "../text-editor/RichTextViewer";
+
+const ViewLesson = ({ isOpen, onClose, children, previewData, fileUrl }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center height-screen">
@@ -12,14 +13,12 @@ const ViewLesson = ({ isOpen, onClose, children }) => {
 
       {/* Modal Container */}
       <div className="relative z-10 w-full max-w-4xl mx-4 bg-white rounded-2xl shadow-xl flex flex-col h-screen">
-        
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-semibold">Lesson Preview</h2>
-          <button
-            onClick={onClose}
-            className="text-slate-500 hover:text-black"
-          >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-300">
+          <h2 className="text-lg font-semibold">
+            Reviewer Preview
+          </h2>
+          <button onClick={onClose} className="text-slate-500 cursor-pointer hover:text-black">
             ✕
           </button>
         </div>
@@ -27,17 +26,21 @@ const ViewLesson = ({ isOpen, onClose, children }) => {
         {/* Scrollable Content */}
         <div className="p-6 overflow-y-auto flex-1">
           {children}
+          {previewData?.content && (
+            <div className="mt-6">
+              <RichTextViewer html={previewData.content} />
+            </div>
+          )}
         </div>
 
-        {/* Footer (optional) */}
-        <div className="px-6 py-4 border-t flex justify-end gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200"
-          >
-            Close
-          </button>
-        </div>
+        {previewData?.file_path && (
+          <div className="px-6 py-4 border-t border-gray-300 flex flex-col gap-2">
+            <div>File Attached</div>
+            <div>
+							<FileRenderer fileUrl={fileUrl} fileType={previewData.file_type} />
+						</div>
+          </div>
+        )}
       </div>
     </div>
   );

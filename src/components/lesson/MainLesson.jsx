@@ -11,14 +11,16 @@ import { Upload, Paperclip, Send, X } from "lucide-react";
 import LessonData from "./LessonData";
 import { useLoading } from "../../context/LoadingContext";
 import { toast } from "react-toastify";
+import FileUpload from "../text-editor/FileUpload";
+import RichTextEditor from "../text-editor/RichTextEditor";
 
 const MainLesson = () => {
   const { loading, setLoading } = useLoading();
   const [lessons, setLessons] = useState([]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
+ 
+  const [editorContent, setEditorContent] = useState("");
+
+  const [attachments, setAttachments] = useState([]);
 
   const loadLessons = async () => {
     setLoading(true);
@@ -59,70 +61,31 @@ const MainLesson = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleAddMaterial = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+	const handleAddReviewer = async (e) => {
+		e.preventDefault();
+		setLoading(true);
+		try {
+			const { data, error } = await insertReviewer(
+				editorContent,
+				null,
+				formatFileSize(attachments[0]?.size),
+				formatFileType(attachments[0]?.type)
+			);
 
-    const file = selectedFile;
-    const filePath = file ? `${Date.now()}-${file.name}` : null;
+			if (error) {
+				console.error("Failed to insert reviewer:", error);
+				toast.error("Unable to save review content.");
+				return;
+			}
 
-    if (title.trim() === "" || description.trim() === "") {
-      toast.error(
-        "Please provide both title and description for the material.",
-      );
-      setLoading(false);
-      return;
-    }
-
-    if (file.size > 3 * 1024 * 1024) {
-      toast.error("File size exceeds 3MB limit. Please choose a smaller file.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      let savedFilePath = null;
-      if (file && filePath) {
-        const { data: uploadData, error: uploadError } = await uploadFile(
-          filePath,
-          file,
-        );
-        if (uploadError) {
-          console.error("File upload error:", uploadError);
-          toast.error("Material saved but file upload failed");
-        } else {
-          console.log("File uploaded successfully:", uploadData);
-          savedFilePath = filePath;
-        }
-      }
-
-			const formattedFileType = formatFileType(file?.type);
-
-      const { error: uploadReviewerError } = await insertReviewer(
-        title,
-        description,
-        savedFilePath,
-        formatFileSize(file?.size || 0),
-        formattedFileType.toUpperCase() || "unknown",
-      );
-
-      if (uploadReviewerError) {
-        console.error("Error adding material:", uploadReviewerError);
-        toast.error("Failed to save material information");
-      } else {
-        toast.success("Material published successfully!");
-      }
-
-      setTitle("");
-      setDescription("");
-      setFileName("");
-      setSelectedFile(null);
-
-      await loadLessons();
-    } finally {
-      setLoading(false);
-    }
-  };
+			console.log("Saved reviewer content:", data);
+			toast.success("Review content saved to Supabase.");
+			setEditorContent("");
+			await loadLessons();
+		} finally {
+			setLoading(false);
+		}
+	};
 
   // File size conversion
   const formatFileSize = (bytes) => {
@@ -202,78 +165,20 @@ const MainLesson = () => {
             </h2>
           </div>
 
-          <form onSubmit={handleAddMaterial} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="e.g., Installation Guide v3"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Description / Instructions
-              </label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all h-32 resize-none"
-                placeholder="Write detailed review notes here..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Or Upload a File (Mock)
-              </label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="file"
-                  onChange={(e) => {
-                    const file = e.target.files[0];
-                    setSelectedFile(file);
-                    setFileName(file?.name || "");
-                  }}
-                  className="hidden"
-                  id="file-upload"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer flex items-center justify-center px-4 py-2 border border-slate-300 rounded-xl text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors w-full"
-                >
-                  <Paperclip className="w-4 h-4 mr-2 text-slate-400" />
-                  {fileName ? fileName : "Choose a file..."}
-                </label>
-                {fileName && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFileName("");
-                      setSelectedFile(null);
-                    }}
-                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center space-x-2"
+          <div className="flex flex-col gap-5">
+            <RichTextEditor
+              initialValue={editorContent}
+              onChange={setEditorContent}
+            />
+            <FileUpload onFilesChange={setAttachments} />
+		            <button
+              type="button"
+              className="w-full cursor-pointer hover:bg-orange-400 bg-orange-500 text-white py-2 font-sans rounded-md"
+              onClick={handleAddReviewer}
             >
-              <Send className="w-4 h-4" />
-              <span>Publish to Installers</span>
+              Publish
             </button>
-          </form>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">

@@ -4,7 +4,7 @@ import LoadingSpinner from "../LoadingSpinner";
 import { toast } from "react-toastify";
 import { useState } from "react";
 import ConfirmationModal from "../ConfirmationModal";
-import {Document, Page} from 'react-pdf';
+
 const LessonData = ({ data = [], onDelete, loading, error }) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [pendingDeletion, setPendingDeletion] = useState(null);

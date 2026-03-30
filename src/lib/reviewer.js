@@ -1,13 +1,12 @@
 import { supabase } from "./supabase";
 
 export const getReviewer = async () => {
-	return await supabase.from('reviewers').select('*');
+	return await supabase.from('reviewers').select('*').order('created_at', { ascending: false });
 }
 
-export const insertReviewer = async (title, description, file_path, file_size, file_type) => {
+export const insertReviewer = async (content, file_path, file_size, file_type) => {
 	return await supabase.from('reviewers').insert({
-		title,
-		description,
+		content,
 		file_path,
 		file_size,
 		file_type

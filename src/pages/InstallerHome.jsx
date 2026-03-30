@@ -5,14 +5,15 @@ import {
   X,
   Bot,
   ImageIcon,
-  FileText,
+  VideoIcon,
   Download,
+  FileText,
   Eye,
   File,
   Filter,
 } from "lucide-react";
 import { useLoading } from "../context/LoadingContext";
-import { getReviewer } from "../lib/reviewer";
+import { getReviewer, getFileUrl } from "../lib/reviewer";
 import ViewLesson from "../components/home/ViewLesson";
 import { useParams, useNavigate } from "react-router-dom";
 // Helper to render the right icon based on file type
@@ -20,19 +21,23 @@ import { useParams, useNavigate } from "react-router-dom";
 export default function ReviewerPlatform() {
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFileType, setSelectedFileType] = useState("ALL");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [lessonData, setLessonData] = useState([]);
 
-	const [isOpenPreview, setIsOpenPreview] = useState(false);
-	const [previewParam, setPreviewParam] = useState(null);
+  const [isOpenPreview, setIsOpenPreview] = useState(false);
+  const [previewParam, setPreviewParam] = useState(null);
 
   const { setLoading } = useLoading();
   const { id } = useParams();
   const navigate = useNavigate();
 
-	const handlePreview = (lessonId) => {
-		navigate(`/home/reviewer/${lessonId}`);
-	}
+  const [fileUrl, setFileUrl] = useState(null);
+
+  const handlePreview = async (lessonId) => {
+    navigate(`/home/reviewer/${lessonId}`);
+  };
 
   const getFileIcon = (type) => {
     const baseStyle =
@@ -75,6 +80,12 @@ export default function ReviewerPlatform() {
           </div>
         );
 
+      case "MP4":
+        return (
+          <div className={`${baseStyle} bg-yellow-100 border-yellow-200`}>
+            <VideoIcon className="h-6 w-6 text-yellow-600" />
+          </div>
+        );
       default:
         return (
           <div className={`${baseStyle} bg-slate-100 border-slate-200`}>
@@ -106,22 +117,73 @@ export default function ReviewerPlatform() {
   useEffect(() => {
     fetchLessonData();
   }, []);
+
   useEffect(() => {
     console.log("Fetched lesson data: ", lessonData);
   }, [lessonData]);
 
   useEffect(() => {
-    if (id) {
-      const lesson = lessonData.find(l => l.id == id);
-      if (lesson) {
-        setPreviewParam(lesson);
-        setIsOpenPreview(true);
-      }
+    if (!id) {
+      setIsOpenPreview(false);
+      setPreviewParam(null);
+      setFileUrl(null);
+      return;
+    }
+
+    const lesson = lessonData.find((l) => String(l.id) === String(id));
+    if (lesson) {
+      setPreviewParam(lesson);
+      setIsOpenPreview(true);
+      fetchFileUrlForPreview(lesson.file_path);
     } else {
       setIsOpenPreview(false);
       setPreviewParam(null);
+      setFileUrl(null);
     }
   }, [id, lessonData]);
+
+  const fetchFileUrlForPreview = async (filePath) => {
+    if (!filePath) {
+      setFileUrl(null);
+      return;
+    }
+
+    const { data, error } = await getFileUrl(filePath);
+    if (error) {
+      console.error("Error fetching reviewer file URL:", error);
+      setFileUrl(null);
+      return;
+    }
+
+    setFileUrl(data?.publicUrl ?? null);
+    console.log("Fetched file URL for preview:", data?.publicUrl ?? null);
+  };
+
+  const availableFileTypes = [
+    "ALL",
+    ...Array.from(
+      new Set(
+        lessonData
+          .map((doc) => String(doc.file_type || "").toUpperCase())
+          .filter(Boolean),
+      ),
+    ),
+  ];
+
+  const filteredLessonData = lessonData.filter((doc) => {
+    const query = searchQuery.trim().toLowerCase();
+    const matchesSearch =
+      query === "" ||
+      [doc.title, doc.description, doc.file_type, doc.file_size]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+
+    const matchesType =
+      selectedFileType === "ALL" ||
+      String(doc.file_type).toUpperCase() === selectedFileType;
+
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans relative">
@@ -136,8 +198,7 @@ export default function ReviewerPlatform() {
               </span>
             </div>
 
-            {/* Search Bar (Desktop) */}
-            <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <div className="flex w-72 md:w-96">
               <div className="relative w-full">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Search className="h-5 w-5 text-slate-400" />
@@ -147,20 +208,12 @@ export default function ReviewerPlatform() {
                   placeholder="Search by topic, document name, or category..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-slate-50 focus:bg-white"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-full focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-slate-50 focus:bg-white"
                 />
               </div>
             </div>
 
-            {/* Profile/Menu Placeholder */}
-            <div className="flex items-center gap-4">
-              <button className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden sm:block">
-                Categories
-              </button>
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center border border-blue-200">
-                <span className="text-sm font-medium text-blue-700">IN</span>
-              </div>
-            </div>
+            
           </div>
         </div>
       </header>
@@ -181,80 +234,122 @@ export default function ReviewerPlatform() {
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-slate-800">Reviewer</h2>
-            <button className="flex items-center text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg px-3 py-1.5 bg-white shadow-sm">
-              <Filter className="w-4 h-4 mr-2" /> Filter
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen((prev) => !prev)}
+                className="flex items-center text-sm font-medium text-slate-600 hover:text-slate-900 border border-slate-300 rounded-lg px-3 py-1.5 bg-white shadow-sm"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                {selectedFileType === "ALL" ? "Filter" : selectedFileType}
+              </button>
+              {isFilterOpen && (
+                <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-20">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">
+                    File type
+                  </p>
+                  <div className="space-y-2">
+                    {availableFileTypes.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => {
+                          setSelectedFileType(type);
+                          setIsFilterOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-xl text-sm ${
+                          selectedFileType === type
+                            ? "bg-blue-50 text-blue-700"
+                            : "text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="divide-y divide-slate-100">
-            {lessonData.map((doc) => (
-              <div
-                key={doc.id}
-                className="p-6 hover:bg-slate-50 transition-colors flex flex-col md:flex-row gap-6 md:items-center justify-between group"
-              >
-                {/* Info Section */}
-                <div className="flex items-start gap-4 flex-1">
-                  {/* Document Icon */}
-                  <div className="shrink-0 mt-1 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                    {getFileIcon(doc.file_type)}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-xs font-bold text-slate-500 tracking-wider italic">
-                        Reviewer Uploaded :{" "}
-                        {doc.created_at
-                          ? new Date(doc.created_at).toLocaleDateString()
-                          : "Unknown date"}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-semibold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
-                      {doc.title}
-                    </h3>
-                    <p className="text-sm text-slate-500 mb-3 max-w-2xl">
-                      {doc.description}
-                    </p>
-
-                    {/* Metadata tags */}
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
-                        {doc.file_type}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
-                        {doc.file_size}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Section */}
-                <div className="flex items-center gap-3 md:w-auto justify-end sm:ml-16 md:ml-0 mt-4 md:mt-0">
-                  <button onClick={() => handlePreview(doc.id)} className="flex-1 cursor-pointer md:flex-none flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm transition-colors">
-                    <Eye className="w-4 h-4 mr-2 text-slate-400" /> View
-                  </button>
-                </div>
+            {filteredLessonData.length === 0 ? (
+              <div className="p-6 text-center text-slate-500">
+                No materials match your search or selected filter.
               </div>
-            ))}
+            ) : (
+              filteredLessonData.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="p-6 hover:bg-slate-50 transition-colors flex flex-col md:flex-row gap-6 md:items-center justify-between group"
+                >
+                  {/* Info Section */}
+                  <div className="flex items-start gap-4 flex-1">
+                    {/* Document Icon */}
+                    <div className="shrink-0 mt-1 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      {getFileIcon(doc.file_type)}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-xs font-bold text-slate-500 tracking-wider italic">
+                          Reviewer Uploaded :{" "}
+                          {doc.created_at
+                            ? new Date(doc.created_at).toLocaleDateString()
+                            : "Unknown date"}
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-semibold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
+                        {doc.title}
+                      </h3>
+                      <p className="text-sm text-slate-500 mb-3 max-w-2xl">
+                        {doc.description}
+                      </p>
+
+                      {/* Metadata tags */}
+                      <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                          {doc.file_type}
+                        </span>
+                        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                          {doc.file_size}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Section */}
+                  <div className="flex items-center gap-3 md:w-auto justify-end sm:ml-16 md:ml-0 mt-4 md:mt-0">
+                    <button
+                      onClick={() => handlePreview(doc.id)}
+                      className="flex-1 cursor-pointer md:flex-none flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 shadow-sm transition-colors"
+                    >
+                      <Eye className="w-4 h-4 mr-2 text-slate-400" /> View
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}{" "}
           </div>
         </div>
       </main>
 
-			<ViewLesson isOpen={isOpenPreview} onClose={() => navigate('/home')}>
+      <ViewLesson
+        isOpen={isOpenPreview}
+        previewData={previewParam}
+        fileUrl={fileUrl}
+        onClose={() => navigate("/home")}
+      >
         {previewParam && (
           <div>
             <h3 className="text-xl font-semibold mb-4">{previewParam.title}</h3>
             <p className="text-slate-600 mb-4">{previewParam.description}</p>
-            {previewParam.file_path && (
-              <div className="mt-4">
-                <p className="text-sm text-slate-500 mb-2">File: {previewParam.file_type}</p>
-                {/* Add file preview here if needed */}
-              </div>
-            )}
+            {console.log(fileUrl)}
           </div>
         )}
       </ViewLesson>
-
+				
       {/* --- Floating AI Assistant (Study Helper Context) --- */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
         {/* Chat Window */}
