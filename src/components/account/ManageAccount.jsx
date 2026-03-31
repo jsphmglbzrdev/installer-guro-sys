@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { Mail, Lock, User, ShieldCheck } from "lucide-react";
-import { supabase } from "../../lib/supabase";
 import { useLoading } from "../../context/LoadingContext";
 import { toast } from "react-toastify";
-import { signUp, fetchAllAdminAccounts } from "../../lib/auth";
+import { signUp, fetchAllAdminAccounts, getCurrentSession } from "../../lib/auth";
 
 const ManageAccount = () => {
+	
+	
 
   const { setLoading } = useLoading();
   const [accounts, setAccounts] = useState([]);
+  const [activeUserId, setActiveUserId] = useState(null);
+  const [activeUserEmail, setActiveUserEmail] = useState("");
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -70,15 +73,34 @@ const ManageAccount = () => {
 		
 	}
 
+	const fetchActiveSession = async () => {
+		try {
+			const { data, error } = await getCurrentSession();
+			if (error) {
+				console.error("Fetch session error:", error);
+				return;
+			}
+
+			const session = data?.session;
+			if (session?.user) {
+				setActiveUserId(session.user.id);
+				setActiveUserEmail(session.user.email || "");
+			}
+		} catch (err) {
+			console.error("Fetch active session failed:", err);
+		}
+	};
+
 	useEffect(() => {
 		fetchAccounts();
+		fetchActiveSession();
 	}, [])
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-sm font-semibold">
               <ShieldCheck className="w-4 h-4" />
               Account Management
             </div>
@@ -89,9 +111,14 @@ const ManageAccount = () => {
               Create new installer accounts, review existing users, and keep
               your team organized.
             </p>
+            {activeUserEmail && (
+              <p className="mt-2 text-sm text-slate-500">
+                Logged in as: <span className="font-semibold text-slate-700">{activeUserEmail}</span>
+              </p>
+            )}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="mt-4 cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="mt-4 cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 transition-colors"
             >
               Create new account
             </button>
@@ -120,24 +147,31 @@ const ManageAccount = () => {
             {accounts.map((account) => (
               <div
                 key={account.id}
-                className="rounded-2xl border border-slate-200 p-4 hover:border-blue-200 transition-all"
+                className="rounded-2xl border border-slate-200 p-4 hover:border-orange-200 transition-all"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold text-slate-900">
-                      {account.fullName}
+                      {account.full_name} - <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {account.role} -  {(activeUserId === account.id || activeUserEmail === account.email) && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                        Active
+                      </span>
+                    )}
+                    </span>
                     </p>
                     <p className="text-sm text-slate-500">{account.email}</p>
+										<p className="text-sm text-slate-500">Date Created : {account.created_at ? new Date(account.created_at).toLocaleDateString() : ""}</p>
                   </div>
-                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    {account.role}
-                  </span>
+                  <div className="flex items-center flex-col ">
+                  
+                   
+										<div>
+											<button className="text-xs rounded-md bg-orange-600 cursor-pointer hover:bg-orange-500 text-white py-2 px-5">Edit</button>
+										</div>
+                  </div>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100">
-                    Date Created : {account.created_at ? new Date(account.created_at).toLocaleDateString() : "N/A"}
-                  </span>
-                </div>
+                
               </div>
             ))}
           </div>
@@ -178,7 +212,7 @@ const ManageAccount = () => {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Jane Doe"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
               </label>
@@ -193,7 +227,7 @@ const ManageAccount = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="jane@company.com"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-10 py-3 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-10 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
               </label>
@@ -208,14 +242,14 @@ const ManageAccount = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-10 py-3 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-10 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
               </label>
 
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                className="w-full rounded-2xl bg-orange-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 Create account
               </button>

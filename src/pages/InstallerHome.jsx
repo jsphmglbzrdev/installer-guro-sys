@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import DOMPurify from "dompurify";
 import {
   Search,
   MessageSquare,
@@ -15,8 +16,31 @@ import {
 import { useLoading } from "../context/LoadingContext";
 import { getReviewer, getFileUrl } from "../lib/reviewer";
 import ViewLesson from "../components/home/ViewLesson";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 // Helper to render the right icon based on file type
+
+const renderSanitizedReviewerContent = (sanitizedHtml) => {
+  const cleanHtml = DOMPurify.sanitize(sanitizedHtml || "", {
+    USE_PROFILES: { html: true },
+  });
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(cleanHtml, "text/html");
+  const firstHeading = doc.querySelector("h1");
+
+  return {
+    sanitizedContent: cleanHtml,
+    firstH1Title: firstHeading?.textContent?.trim() || "",
+    plainText: doc.body.textContent?.trim() || "",
+  };
+};
+
+const getFirstH1Title = (html) => {
+  const { firstH1Title, plainText } = renderSanitizedReviewerContent(
+    html || "",
+  );
+  return firstH1Title || plainText || "";
+};
 
 export default function ReviewerPlatform() {
   const [isAiChatOpen, setIsAiChatOpen] = useState(false);
@@ -34,6 +58,11 @@ export default function ReviewerPlatform() {
   const navigate = useNavigate();
 
   const [fileUrl, setFileUrl] = useState(null);
+
+  const previewContentData = useMemo(
+    () => renderSanitizedReviewerContent(previewParam?.content || ""),
+    [previewParam],
+  );
 
   const handlePreview = async (lessonId) => {
     navigate(`/home/reviewer/${lessonId}`);
@@ -174,7 +203,7 @@ export default function ReviewerPlatform() {
     const query = searchQuery.trim().toLowerCase();
     const matchesSearch =
       query === "" ||
-      [doc.title, doc.description, doc.file_type, doc.file_size]
+      [previewParam]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
 
@@ -192,11 +221,11 @@ export default function ReviewerPlatform() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <span className="text-xl font-bold text-slate-900 tracking-tight">
                 InstallerGuro
               </span>
-            </div>
+            </Link>
 
             <div className="flex w-72 md:w-96">
               <div className="relative w-full">
@@ -212,8 +241,6 @@ export default function ReviewerPlatform() {
                 />
               </div>
             </div>
-
-            
           </div>
         </div>
       </header>
@@ -259,7 +286,7 @@ export default function ReviewerPlatform() {
                         }}
                         className={`w-full text-left px-3 py-2 rounded-xl text-sm ${
                           selectedFileType === type
-                            ? "bg-blue-50 text-blue-700"
+                            ? "bg-blue-50 text-orange-700"
                             : "text-slate-700 hover:bg-slate-100"
                         }`}
                       >
@@ -300,12 +327,9 @@ export default function ReviewerPlatform() {
                         </span>
                       </div>
 
-                      <h3 className="text-lg font-semibold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
-                        {doc.title}
+                      <h3 className="text-lg font-semibold text-slate-800 mb-1 group-hover:text-orange-600 transition-colors">
+                        {getFirstH1Title(doc.content) || doc.content}
                       </h3>
-                      <p className="text-sm text-slate-500 mb-3 max-w-2xl">
-                        {doc.description}
-                      </p>
 
                       {/* Metadata tags */}
                       <div className="flex items-center gap-3">
@@ -339,17 +363,11 @@ export default function ReviewerPlatform() {
         isOpen={isOpenPreview}
         previewData={previewParam}
         fileUrl={fileUrl}
+        previewTitle={previewContentData.firstH1Title}
+        sanitizedContent={previewContentData.sanitizedContent}
         onClose={() => navigate("/home")}
-      >
-        {previewParam && (
-          <div>
-            <h3 className="text-xl font-semibold mb-4">{previewParam.title}</h3>
-            <p className="text-slate-600 mb-4">{previewParam.description}</p>
-            {console.log(fileUrl)}
-          </div>
-        )}
-      </ViewLesson>
-				
+      ></ViewLesson>
+
       {/* --- Floating AI Assistant (Study Helper Context) --- */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
         {/* Chat Window */}

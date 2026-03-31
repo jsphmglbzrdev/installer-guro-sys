@@ -29,5 +29,9 @@ export const deleteFile = async (filePath) => {
 	return await supabase.storage.from('reviewer_attachment').remove([filePath]);
 }
 
+export const updateReviewer = async (id, fields) => {
+	return await supabase.from('reviewers').update(fields).eq('id', id);
+}
+
 
   

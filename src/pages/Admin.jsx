@@ -14,9 +14,9 @@ import { useAuth } from "../context/AuthContext";
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("adminActiveTab") || "lessons";
+      return localStorage.getItem("adminActiveTab") || "reviewer";
     }
-    return "lessons";
+    return "reviewer";
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);

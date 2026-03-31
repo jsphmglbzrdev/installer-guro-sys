@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DOMPurify from "dompurify";
 import {
   insertReviewer,
   uploadFile,
@@ -6,9 +7,11 @@ import {
   getFileUrl,
   deleteReviewer,
   deleteFile,
+  updateReviewer,
 } from "../../lib/reviewer";
-import { Upload, Paperclip, Send, X } from "lucide-react";
+import { Upload } from "lucide-react";
 import LessonData from "./LessonData";
+import ModifyLesson from "./ModifyLesson";
 import { useLoading } from "../../context/LoadingContext";
 import { toast } from "react-toastify";
 import FileUpload from "../text-editor/FileUpload";
@@ -17,10 +20,34 @@ import RichTextEditor from "../text-editor/RichTextEditor";
 const MainLesson = () => {
   const { loading, setLoading } = useLoading();
   const [lessons, setLessons] = useState([]);
- 
+
   const [editorContent, setEditorContent] = useState("");
 
   const [attachments, setAttachments] = useState([]);
+  const [isModifyOpen, setIsModifyOpen] = useState(false);
+  const [modifyingReviewer, setModifyingReviewer] = useState(null);
+  const [modifyContent, setModifyContent] = useState("");
+
+  const isEditorContentEmpty = (content) => {
+    const text = content
+      ? content
+          .replace(/<[^>]+>/g, "")
+          .replace(/\s+/g, "")
+          .trim()
+      : "";
+    return text.length === 0;
+  };
+
+  const normalizeFileName = (name) => {
+    if (!name) return "attachment";
+
+    let fileName = String(name).split(/[/\\]/).pop() || "attachment";
+    fileName = fileName.replace(/\s+/g, "_");
+    fileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    fileName = fileName.replace(/(\.[^.]+)(\1)+$/i, "$1");
+
+    return fileName;
+  };
 
   const loadLessons = async () => {
     setLoading(true);
@@ -61,31 +88,138 @@ const MainLesson = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-	const handleAddReviewer = async (e) => {
-		e.preventDefault();
-		setLoading(true);
-		try {
-			const { data, error } = await insertReviewer(
-				editorContent,
-				null,
-				formatFileSize(attachments[0]?.size),
-				formatFileType(attachments[0]?.type)
-			);
+  const getModifyDraftKey = (reviewerId) => `modifyReviewerDraft:${reviewerId}`;
 
-			if (error) {
-				console.error("Failed to insert reviewer:", error);
-				toast.error("Unable to save review content.");
-				return;
-			}
+  const loadModifyDraft = (reviewer) => {
+    if (!reviewer?.id) return reviewer?.content || "";
+    try {
+      const draft = localStorage.getItem(getModifyDraftKey(reviewer.id));
+      return draft !== null ? draft : reviewer.content || "";
+    } catch (error) {
+      return reviewer.content || "";
+    }
+  };
 
-			console.log("Saved reviewer content:", data);
-			toast.success("Review content saved to Supabase.");
-			setEditorContent("");
-			await loadLessons();
-		} finally {
-			setLoading(false);
-		}
-	};
+  const saveModifyDraft = (reviewerId, value) => {
+    if (!reviewerId) return;
+    try {
+      localStorage.setItem(getModifyDraftKey(reviewerId), value ?? "");
+    } catch (error) {
+      // ignore storage errors
+    }
+  };
+
+  const clearModifyDraft = (reviewerId) => {
+    if (!reviewerId) return;
+    try {
+      localStorage.removeItem(getModifyDraftKey(reviewerId));
+    } catch (error) {
+      // ignore storage errors
+    }
+  };
+
+  const openModifyModal = (reviewer) => {
+    setModifyingReviewer(reviewer);
+    setModifyContent(loadModifyDraft(reviewer));
+    setIsModifyOpen(true);
+  };
+
+  const closeModifyModal = () => {
+    setIsModifyOpen(false);
+    setModifyingReviewer(null);
+  };
+
+  const handleSaveReviewer = async () => {
+    if (!modifyingReviewer) return;
+    setLoading(true);
+    try {
+      const sanitizedContent = DOMPurify.sanitize(modifyContent, {
+        USE_PROFILES: { html: true },
+      });
+
+      const { error } = await updateReviewer(modifyingReviewer.id, {
+        content: sanitizedContent,
+      });
+
+      if (error) {
+        console.error("Failed to update reviewer:", error);
+        toast.error("Unable to save changes.");
+        return;
+      }
+
+      clearModifyDraft(modifyingReviewer.id);
+      toast.success("Reviewer updated successfully.");
+      closeModifyModal();
+      await loadLessons();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!modifyingReviewer?.id) return;
+    saveModifyDraft(modifyingReviewer.id, modifyContent);
+  }, [modifyingReviewer?.id, modifyContent]);
+
+  const handleAddReviewer = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const sanitizedContent = DOMPurify.sanitize(editorContent, {
+        USE_PROFILES: { html: true },
+      });
+
+      const selectedFile = attachments?.[0] || null;
+      let filePath = "";
+      let fileSize = "";
+      let fileType = "";
+
+      // ✅ Only process file if it exists
+      if (selectedFile) {
+        const safeFileName = normalizeFileName(selectedFile.name);
+        filePath = `${Date.now()}_${safeFileName}`;
+        fileSize = formatFileSize(selectedFile.size);
+        fileType = formatFileType(selectedFile.type);
+
+        const { error: uploadError } = await uploadFile(filePath, selectedFile);
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          toast.error("File upload failed. Please try again.");
+          return; // ✅ stop execution 
+        }
+      }
+
+      // ✅ Insert data (with or without file)
+      const { data, error } = await insertReviewer(
+        sanitizedContent,
+        filePath,
+        fileSize,
+        fileType,
+      );
+
+      if (error) {
+        console.error("Failed to insert reviewer:", error);
+        toast.error("Unable to save review content.");
+        return;
+      }
+
+      console.log("Saved reviewer content:", data);
+      toast.success("Review content saved to Supabase.");
+
+      // ✅ Reset state
+      setEditorContent("");
+      setAttachments([]);
+
+      await loadLessons();
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // File size conversion
   const formatFileSize = (bytes) => {
@@ -119,7 +253,7 @@ const MainLesson = () => {
         "xlsx",
       "application/zip": "zip",
     };
-    return map[mimeType] || mimeType.split("/")[1] || "";
+    return (map[mimeType] || mimeType.split("/")[1] || "").toUpperCase();
   };
 
   const handleDelete = async (lesson) => {
@@ -158,7 +292,7 @@ const MainLesson = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <div className="flex items-center space-x-3 mb-6">
             <div className="bg-blue-50 p-2 rounded-lg">
-              <Upload className="w-5 h-5 text-blue-600" />
+              <Upload className="w-5 h-5 text-orange-600" />
             </div>
             <h2 className="text-lg font-semibold text-slate-800">
               Publish Review Material
@@ -171,15 +305,28 @@ const MainLesson = () => {
               onChange={setEditorContent}
             />
             <FileUpload onFilesChange={setAttachments} />
-		            <button
+            <button
               type="button"
-              className="w-full cursor-pointer hover:bg-orange-400 bg-orange-500 text-white py-2 font-sans rounded-md"
+              disabled={isEditorContentEmpty(editorContent)}
+              className="w-full bg-orange-500 text-white py-2 font-sans rounded-md 
+             hover:bg-orange-400 cursor-pointer 
+             disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400 transition-colors"
               onClick={handleAddReviewer}
             >
               Publish
             </button>
           </div>
         </div>
+
+        <ModifyLesson
+          isOpen={isModifyOpen}
+          reviewer={modifyingReviewer}
+          content={modifyContent}
+          onContentChange={setModifyContent}
+          onClose={closeModifyModal}
+          onSave={handleSaveReviewer}
+          saving={loading}
+        />
 
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">
@@ -188,6 +335,7 @@ const MainLesson = () => {
           <div className="space-y-3">
             <LessonData
               data={lessons}
+              onModify={openModifyModal}
               onDelete={handleDelete}
               loading={loading}
             />

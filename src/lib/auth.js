@@ -9,7 +9,7 @@ export const signUp = async (email, password, full_name, role = "Admin") => {
       password,
       options: {
         data: { full_name }, // stored in user_metadata
-      },
+      },	
     });
 
     if (signUpError) throw signUpError;
@@ -72,3 +72,6 @@ export const signOut = async () => {
 export const fetchAllAdminAccounts = async () => {
 	return await supabase.from("admin_profiles").select("*");
 }
+
+export const getCurrentSession = async() => await supabase.auth.getSession();
+export const getCurrentUser =async() => await supabase.auth.getUser();

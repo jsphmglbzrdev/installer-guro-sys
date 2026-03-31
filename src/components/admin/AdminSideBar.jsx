@@ -48,15 +48,15 @@ const AdminSideBar = ({
                 onClick={() => onTabChange(tab.id)}
                 className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
                   isActive
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "text-slate-600 hover:bg-white hover:text-blue-600 hover:shadow-sm border border-transparent hover:border-slate-200"
+                    ? "bg-orange-600 text-white shadow-md"
+                    : "text-slate-600 hover:bg-white hover:text-orange-600 hover:shadow-sm border border-transparent hover:border-slate-200"
                 }`}
               >
                 <Icon
                   className={`w-5 h-5 transition-colors ${
                     isActive
                       ? "text-white"
-                      : "text-slate-400 group-hover:text-blue-500"
+                      : "text-slate-400 group-hover:text-orange-500"
                   }`}
                 />
                 <span>{tab.label}</span>
@@ -69,7 +69,7 @@ const AdminSideBar = ({
           <button
             type="button"
             onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors font-medium text-sm"
+            className="w-full cursor-pointer flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors font-medium text-sm"
           >
             <LogOut className="w-4 h-4" />
             Logout

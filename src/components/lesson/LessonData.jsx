@@ -1,11 +1,12 @@
-import { Trash, Download } from "lucide-react";
+import { Trash, Download, Edit } from "lucide-react";
 import { saveAs } from "file-saver";
 import LoadingSpinner from "../LoadingSpinner";
 import { toast } from "react-toastify";
 import { useState } from "react";
 import ConfirmationModal from "../ConfirmationModal";
+import DOMPurify from "dompurify";
 
-const LessonData = ({ data = [], onDelete, loading, error }) => {
+const LessonData = ({ data = [], onModify, onDelete, loading, error }) => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [pendingDeletion, setPendingDeletion] = useState(null);
 
@@ -28,6 +29,28 @@ const LessonData = ({ data = [], onDelete, loading, error }) => {
 
   const isImageUrl = (url) => /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(url);
   const isPDFUrl = (url) => /\.pdf$/i.test(url);
+
+  const getPreviewTitle = (html = "") => {
+    const sanitized = DOMPurify.sanitize(html, {
+      USE_PROFILES: { html: true },
+    });
+
+    const headingMatch = sanitized.match(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/i);
+    if (headingMatch) {
+      return headingMatch[1].replace(/<[^>]+>/g, "").trim();
+    }
+
+    const text =
+      sanitized
+        .replace(/<br\s*\/?>(\s*)/gi, "\n")
+        .replace(/<\/p>/gi, "\n")
+        .replace(/<[^>]+>/g, "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)[0] || "";
+
+    return text;
+  };
 
   const handleDownload = async (item) => {
     if (!item?.fileUrl) return;
@@ -53,7 +76,7 @@ const LessonData = ({ data = [], onDelete, loading, error }) => {
         : "download";
       const filename = `${nameBase}${extension}`;
 
-			console.log(filename)
+      console.log(filename);
 
       saveAs(blob, filename);
       toast.success("File downloaded successfully!");
@@ -80,15 +103,16 @@ const LessonData = ({ data = [], onDelete, loading, error }) => {
   }
 
   if (!data.length) {
-    return <p className="text-slate-500">No lessons found</p>;
+    return <p className="text-slate-500">No reviewer uploaded found</p>;
   }
 
-	console.log(data)
+  console.log(data);
   return (
     <div className="flex flex-col gap-4">
       {data.map((item) => {
         const isPdf = item.fileUrl && isPDFUrl(item.fileUrl);
         const isImage = item.fileUrl && isImageUrl(item.fileUrl);
+        const displayFileType = item.file_type?.toUpperCase() || "";
 
         return (
           <div
@@ -97,7 +121,7 @@ const LessonData = ({ data = [], onDelete, loading, error }) => {
           >
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-slate-800">
-                {item.title}
+                {getPreviewTitle(item.content) || "Untitled"}
               </h3>
               <p className="text-slate-500">{item.description}</p>
               <div className="flex flex-wrap gap-2 mt-2 text-sm">
@@ -113,18 +137,37 @@ const LessonData = ({ data = [], onDelete, loading, error }) => {
                 )}
                 <button
                   type="button"
+                  onClick={() => onModify && onModify(item)}
+                  className="cursor-pointer inline-flex items-center gap-1 text-slate-500 hover:text-slate-900"
+                >
+                  <Edit className="w-4 h-4" />
+                  Modify
+                </button>
+                <button
+                  type="button"
                   onClick={() => openDeleteModal(item)}
                   className="cursor-pointer inline-flex items-center gap-1 text-slate-500 hover:text-red-900"
                 >
                   <Trash className="w-4 h-4" />
                   Delete
                 </button>
-								<div className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{item.file_type}</div>
-								<div className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">{item.file_size}</div>
+              </div>
+
+              <div className="flex gap-2 mt-2">
+                {displayFileType && (
+                  <div className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                    {displayFileType}
+                  </div>
+                )}
+                {item.file_size && (
+                  <div className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-600">
+                    {item.file_size}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="w-[100px] h-[120px] border border-slate-200 rounded-md overflow-hidden">
+            <div className="w-25 h-30 border border-slate-200 rounded-md overflow-hidden">
               {item.fileUrl ? (
                 isPdf ? (
                   <a
@@ -133,7 +176,7 @@ const LessonData = ({ data = [], onDelete, loading, error }) => {
                     rel="noopener noreferrer"
                     className="flex h-full items-center justify-center text-blue-600 underline"
                   >
-                    View file
+                    VIEW FILE
                   </a>
                 ) : isImage ? (
                   <a
@@ -144,7 +187,7 @@ const LessonData = ({ data = [], onDelete, loading, error }) => {
                   >
                     <img
                       src={item.fileUrl}
-                      alt={item.title || "Lesson image"}
+                      alt={item.title || "Reviewer image"}
                       className="w-full h-full object-cover hover:opacity-90 transition-opacity"
                     />
                   </a>
@@ -155,26 +198,26 @@ const LessonData = ({ data = [], onDelete, loading, error }) => {
                     rel="noopener noreferrer"
                     className="flex h-full items-center justify-center text-blue-600 underline"
                   >
-                    View file
+                    VIEW FILE
                   </a>
                 )
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-slate-400">
-                  No file
+                <div className="flex h-full items-center justify-center text-sm text-slate-400 uppercase">
+                  NO FILE
                 </div>
               )}
             </div>
-            <ConfirmationModal
-              isOpen={isDeleteModalOpen}
-              headingText="Delete this lesson?"
-              message="Are you sure you want to delete this lesson? This action is irreversible."
-              buttonTxt="Confirm"
-              onConfirm={handleDelete}
-              onCancel={handleCancel}
-            />
           </div>
         );
       })}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        headingText="Delete this lesson?"
+        message="Are you sure you want to delete this lesson? This action is irreversible."
+        buttonTxt="Confirm"
+        onConfirm={handleDelete}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

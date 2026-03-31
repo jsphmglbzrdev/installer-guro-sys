@@ -84,8 +84,10 @@ const RichTextEditor = ({ initialValue = "", onChange }) => {
   };
 
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML === "") {
-      editorRef.current.innerHTML = initialValue;
+    if (!editorRef.current) return;
+
+    if (editorRef.current.innerHTML === "") {
+      editorRef.current.innerHTML = initialValue || "<h1><br></h1>";
       updateActiveStates();
     }
   }, [initialValue]);
@@ -127,14 +129,14 @@ const RichTextEditor = ({ initialValue = "", onChange }) => {
           onInput={handleInput}
           onKeyUp={updateActiveStates}
           onMouseUp={updateActiveStates}
-          className="ProseMirror"
+          className="ProseMirror min-h-70 max-h-[56vh] overflow-y-auto p-4"
           spellCheck="false"
         />
       </div>
 
       <div className="bg-slate-50 border-t border-slate-200 px-4 py-2 text-xs text-slate-500 flex justify-between items-center rounded-b-xl">
         <span>{wordCount} words</span>
-        <span>Native React Editor</span>
+        <span>InstallerGuro</span>
       </div>
     </div>
   );
