@@ -52,47 +52,32 @@ const LessonData = ({ data = [], onModify, onDelete, loading, error }) => {
     return text;
   };
 
-  const handleDownload = async (item) => {
-    if (!item?.fileUrl) return;
+const handleDownload = async (item) => {
+  if (!item?.fileUrl) return;
 
-    try {
-      const res = await fetch(item.fileUrl);
-      if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
-      const mimeType = blob.type;
-      let extension = "";
+  try {
+    const res = await fetch(item.fileUrl);
+    if (!res.ok) throw new Error("Download failed");
 
-      if (isPDFUrl(item.fileUrl) || mimeType === "application/pdf") {
-        extension = ".pdf";
-      } else if (isImageUrl(item.fileUrl)) {
-        const matches = item.fileUrl.match(/\.(jpe?g|png|gif|webp|bmp|svg)$/i);
-        extension = matches ? `.${matches[1]}` : ".png";
-      } else {
-        extension = ".bin";
-      }
+    const blob = await res.blob();
 
-      const nameBase = item.file_path
-        ? item.file_path.replace(/\s+/g, "-").toLowerCase()
-        : "download";
-      const filename = `${nameBase}${extension}`;
+    const link = document.createElement("a");
+    link.href = window.URL.createObjectURL(blob);
 
-      console.log(filename);
+    const filename =
+      item.file_path?.replace(/\s+/g, "-").toLowerCase() || "download";
 
-      saveAs(blob, filename);
-      toast.success("File downloaded successfully!");
-    } catch (downloadError) {
-      console.error("Download error", downloadError);
-      toast.error("Failed to download file. Please try again.");
-      // fallback inline download if library fails
-      const link = document.createElement("a");
-      link.href = item.fileUrl;
-      link.download = item.fileUrl.split("/").pop() || "download";
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }
-  };
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    toast.success("File Downloaded Successfully");
+  } catch (error) {
+    console.error(error);
+    toast.error("Download failed");
+  }
+};
 
   if (loading) {
     return <LoadingSpinner />;

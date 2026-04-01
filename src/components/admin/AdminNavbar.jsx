@@ -25,7 +25,7 @@ const AdminNavbar = ({ onMenuToggle }) => {
       <div className="flex items-center gap-3">
         <div className="text-right">
           <p className="text-sm font-semibold text-slate-900">
-            {user?.user_metadata?.full_name || "Loading..."}
+            {user?.user_metadata?.full_name || "Default User"}
           </p>
           <p className="text-xs text-slate-500">Administrator</p>
         </div>

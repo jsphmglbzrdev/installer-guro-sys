@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Shield, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { Shield, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 // --- Inline Mock Dependencies to ensure the Canvas compiles successfully ---
 
-import { useLoading } from '../context/LoadingContext';
-import TextMessage from '../components/TextMessage';
-import { signIn } from '../lib/auth';
+import { useLoading } from "../context/LoadingContext";
+import TextMessage from "../components/TextMessage";
+import { signIn } from "../lib/auth";
 // --- Main Application Component ---
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
   const [type, setType] = useState("");
@@ -20,10 +20,10 @@ export default function LoginScreen() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     setLoading(true);
     setMessage("");
-    try {  
+    try {
       const { data, error } = await signIn(email, password);
       if (error) {
         setType("error");
@@ -33,11 +33,16 @@ export default function LoginScreen() {
         setMessage("Login Successfully!");
         console.log(data);
         const delay = setTimeout(() => {
-          navigate('/admin');
+          navigate("/admin");
         }, 2000);
 
         return () => clearTimeout(delay);
       }
+    } catch (err) {
+      console.error("Login error:", err);
+      setType("error");
+
+      setMessage("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -47,7 +52,7 @@ export default function LoginScreen() {
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-slate-50">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="bg-blue-600 p-3 rounded-xl shadow-lg">
+          <div className="bg-orange-600 p-3 rounded-xl shadow-lg">
             <Shield className="h-8 w-8 text-white" />
           </div>
         </div>
@@ -58,12 +63,15 @@ export default function LoginScreen() {
           Sign in to the Dashboard
         </p>
       </div>
-      
+
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 border border-slate-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-slate-700"
+              >
                 Email address
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -73,7 +81,7 @@ export default function LoginScreen() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all sm:text-sm"
+                  className="w-full px-4 py-3 rounded-md border border-slate-300 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all sm:text-sm"
                   placeholder="admin@example.com"
                   disabled={isLoading}
                 />
@@ -81,7 +89,10 @@ export default function LoginScreen() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-slate-700"
+              >
                 Password
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -94,11 +105,11 @@ export default function LoginScreen() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-12 py-3 rounded-xl border border-slate-300 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all sm:text-sm"
+                  className="w-full pl-10 pr-12 py-3 rounded-md border border-slate-300 focus:ring-1 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all sm:text-sm"
                   placeholder="••••••••"
                   disabled={isLoading}
                 />
-                
+
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -113,16 +124,16 @@ export default function LoginScreen() {
                 </button>
               </div>
             </div>
-            
+
             <TextMessage message={message} type={type} />
 
             <div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full cursor-pointer flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full cursor-pointer flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? "Signing in..." : "Sign in"}
               </button>
             </div>
           </form>
@@ -140,7 +151,7 @@ export default function LoginScreen() {
             <div className="mt-6">
               <button
                 type="button"
-                onClick={() => navigate('/home')}
+                onClick={() => navigate("/home")}
                 disabled={isLoading}
                 className="w-full flex cursor-pointer justify-center items-center py-3 px-4 border-2 border-slate-200 rounded-xl shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all group disabled:opacity-70 disabled:cursor-not-allowed"
               >

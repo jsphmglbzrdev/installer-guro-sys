@@ -14,7 +14,6 @@ const AdminSideBar = ({
 
     { id: "ai", label: "AI Configuration", icon: Bot },
     { id: "history", label: "Log History", icon: Clock },
-    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -46,7 +45,7 @@ const AdminSideBar = ({
                 key={tab.id}
                 type="button"
                 onClick={() => onTabChange(tab.id)}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
+                className={`flex cursor-pointer items-center space-x-3 px-4 py-3 rounded-xl transition-all text-sm font-medium group ${
                   isActive
                     ? "bg-orange-600 text-white shadow-md"
                     : "text-slate-600 hover:bg-white hover:text-orange-600 hover:shadow-sm border border-transparent hover:border-slate-200"

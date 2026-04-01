@@ -19,7 +19,7 @@ const ModifyLesson = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed h-full inset-0 z-50 flex items-center justify-center bg-black/5 backdrop-blur-xs"
       onClick={onClose}
     >	
       <div

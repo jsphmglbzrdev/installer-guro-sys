@@ -9,7 +9,7 @@ import AdminNavbar from "../components/admin/AdminNavbar";
 import AdminSideBar from "../components/admin/AdminSideBar";
 import ManageAccount from "../components/account/ManageAccount";
 import LogHistory from "../components/log-history/LogHistory";
-import { useAuth } from "../context/AuthContext";
+import Chatbot from "../components/chatbot/Chatbot";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState(() => {
@@ -101,8 +101,6 @@ export default function AdminDashboard() {
           {/* TAB 3: LOG HISTORY */}
           {activeTab === "history" && <LogHistory />}
 
-          {/* TAB 4: SETTINGS */}
-          {activeTab === "settings" && <Settings />}
         </div>
       </div>
 

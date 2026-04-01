@@ -8,14 +8,14 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 🔹 Get current user on load
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
+    // 🔹 Get current session on load
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user || null);
       setLoading(false);
     };
 
-    getUser();
+    getSession();
 
     // 🔹 Listen for login/logout changes
     const { data: listener } = supabase.auth.onAuthStateChange(
